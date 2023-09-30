@@ -1,3 +1,4 @@
+using Amazon.SecurityToken.Model.Internal.MarshallTransformations;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
@@ -7,11 +8,13 @@ using MongoDB.Driver;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using static chwhatsappgpt.GetChat;
 using static chwhatsappgpt.GetGpt;
 
 namespace chwhatsappgpt;
@@ -30,19 +33,42 @@ public static class GetChat
         [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req,
         ILogger log)
     {
-        log.LogInformation("C# HTTP trigger function processed a request.");
-
-        string name = req.Query["name"];
+        log.LogInformation("Inicio Chat");
 
         string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-        var requestBodyModel = JsonConvert.DeserializeObject<RequestBody>(requestBody);
-        var content = $"No \"Texto\" tem alguma data? alguma informacao se é sobre fatura? Tem pedido de informacao sobre produto? Tem pedido de cancelamento? Tem informacao de roubo ou perda de cartao? Tem algum pedido de informacao de Cartao? Tem pedido de informacao de Cadastro? Informacao sobre nao reconhecer Compras? O texto contem saudacao inicial de conversa?\nSe hover data preciso que ela seja formatada em MM/YYYY\nPreciso que o dado sejam resumido. \n- Data: <<valor>>\n- Fatura: Sim ou Nao\n- Produto: Sim ou Nao\n- Roubo ou Perda de Cartao: Sim ou Nao\n- Cancelamento: Sim ou Nao\n- Cartao: Sim ou Nao\n- Cadastro: Sim ou Nao\n- Nao-Reconhece-Compras: Sim ou Nao\n- Saudacao: Sim ou Nao\nObservacao: - Se tiver no texto \"fatura do meu cartao\" a fatura= sim e cartao = nao;\n\nTexto: \"{requestBodyModel.texto}\"";
+
+        log.LogInformation(requestBody);
+
+
+        var parameters = parametrosPesquisa(requestBody, log);
+
+        var content = $"No \"Texto\" tem alguma data? alguma informacao se é sobre fatura? Tem pedido de informacao sobre produto? Tem pedido de cancelamento? Tem informacao de roubo ou perda de cartao? Tem algum pedido de informacao de Cartao? Tem pedido de informacao de Cadastro? Informacao sobre nao reconhecer Compras? O texto contem saudacao inicial de conversa?\nSe hover data preciso que ela seja formatada em MM/YYYY\nPreciso que o dado sejam resumido. \n- Data: <<valor>>\n- Fatura: Sim ou Nao\n- Produto: Sim ou Nao\n- Roubo ou Perda de Cartao: Sim ou Nao\n- Cancelamento: Sim ou Nao\n- Cartao: Sim ou Nao\n- Cadastro: Sim ou Nao\n- Nao-Reconhece-Compras: Sim ou Nao\n- Saudacao: Sim ou Nao\nObservacao: - Se tiver no texto \"fatura do meu cartao\" a fatura= sim e cartao = nao;\n\nTexto: \"{parameters.Question}\"";
         var response = await GenerateResponse(content);
 
         if (response.choices.Count > 0)
         {
-            var responseTratado = ConverterValor(response.choices[0].text);
+            log.LogInformation("Fluxo");
 
+            var responseTratado = ConverterValor(RemoverAcentos(response.choices[0].text));
+            log.LogInformation("response - " + Newtonsoft.Json.JsonConvert.SerializeObject(responseTratado));
+
+            //SAUDACAO
+            var saudacao = SeSaudacao(responseTratado);
+            if (saudacao.Saudacao && saudacao.IsEnviar)
+            {
+                log.LogInformation("Saudacao " + saudacao.ToString());
+                return new OkObjectResult(saudacao.Mensagem);
+            }
+
+            //FATURA
+            var fatura = SeFatura(responseTratado);
+            if (fatura.Fatura && saudacao.IsEnviar)
+            {
+                log.LogInformation("Saudacao " + fatura.ToString());
+                return new OkObjectResult(fatura.Mensagem);
+            }
+
+            log.LogInformation("Final");
             return new OkObjectResult(responseTratado);
         }
         else
@@ -131,6 +157,9 @@ public static class GetChat
                     case "- Nao-Reconhece-Compras":
                         responseInfo.NaoReconheceCompras = value.Equals("Sim", StringComparison.OrdinalIgnoreCase);
                         break;
+                    case "- Saudacao":
+                        responseInfo.Saudacao= value.Equals("Sim", StringComparison.OrdinalIgnoreCase);
+                        break;
                     default:
                         // Ignorar chaves desconhecidas
                         break;
@@ -148,36 +177,90 @@ public static class GetChat
 
     public static Parameters parametrosPesquisa(string parameters, ILogger log)
     {
-        var requestBody = parameters.Split('&')
-            .Select(param => param.Split('='))
-            .ToDictionary(pair => Uri.UnescapeDataString(pair[0]), pair => Uri.UnescapeDataString(pair[1]));
+        if (parameters.Contains('&'))
+        {
+            var requestBody = parameters.Split('&')?
+                .Select(param => param.Split('='))?
+                .ToDictionary(pair => Uri.UnescapeDataString(pair[0]), pair => Uri.UnescapeDataString(pair[1]));
 
-        var obj = new Parameters();
+            var obj = new Parameters();
 
-        if (requestBody.ContainsKey("profileName"))
-            obj.ProfileName = requestBody["profileName"];
+            if (requestBody.ContainsKey("profileName"))
+                obj.ProfileName = requestBody["profileName"];
 
-        if (requestBody.ContainsKey("waId"))
-            obj.WaId = requestBody["waId"];
+            if (requestBody.ContainsKey("waId"))
+                obj.WaId = requestBody["waId"];
 
-        if (requestBody.ContainsKey("question"))
-            obj.Question = requestBody["question"];
+            if (requestBody.ContainsKey("question"))
+                obj.Question = requestBody["question"];
 
-        if (requestBody.ContainsKey("body"))
-            obj.Body = requestBody["body"];
+            if (requestBody.ContainsKey("body"))
+                obj.Body = requestBody["body"];
 
-        if (requestBody.ContainsKey("fromreceived"))
-            obj.Fromreceived = requestBody["fromreceived"];
+            if (requestBody.ContainsKey("fromreceived"))
+                obj.Fromreceived = requestBody["fromreceived"];
 
-        if (requestBody.ContainsKey("to"))
-            obj.To = requestBody["to"];
+            if (requestBody.ContainsKey("to"))
+                obj.To = requestBody["to"];
 
-        obj.Parametros = requestBody;
-        obj.User = obj?.Fromreceived?.Split(":")[1];
-
-        return obj;
+            obj.Parametros = requestBody;
+            obj.User = obj?.Fromreceived?.Split(":")[1];
+            log.LogInformation("parametrosPesquisa - " + obj.ToString());
+            return obj;
+        }
+        else
+        {
+            var obj = JsonConvert.DeserializeObject<Parameters>(parameters);
+            log.LogInformation("parametrosPesquisa - " + obj.ToString());
+            return obj;
+        }
     }
 
+    //SAUDACAO
+    private static ResponseInfo SeSaudacao(ResponseInfo responseInfo)
+    {
+        if (responseInfo.Saudacao &&
+            !new[] { responseInfo.Fatura, responseInfo.Produto, responseInfo.RouboPerdaCartao, responseInfo.Cancelamento, responseInfo.Cartao, responseInfo.Cadastro, responseInfo.NaoReconheceCompras }.Any(field => field))
+        {
+            responseInfo.Mensagem = "Olá, {nome}! Tudo bem?\n Para que possamos ajuda-lo você pode solicitar o que desejar em poucas palavras.\n Exemplo:\n- Minha fatura de Janeiro de 2023;\n- Saldo do meu cartão;\n- Quais os produtos que posso adquirir;\n- Cancelar cartão;\n- Nao Reconheço uma compra;\n- Bloquear meu cartão;\n\nAhhh.. Você pode enviar áudio também. Clique [aqui]({whatsappLink}) para entrar em contato pelo WhatsApp.";
+            responseInfo.IsEnviar = true;
+
+            return responseInfo;
+        }
+
+        return responseInfo;
+    }
+
+    //FATURA
+    private static ResponseInfo SeFatura(ResponseInfo responseInfo)
+    {
+        string formatoData = "MM/yyyy";
+
+        if (responseInfo.Fatura && DateTime.TryParseExact(responseInfo.Data, formatoData, null, System.Globalization.DateTimeStyles.None, out DateTime dataValida)) 
+        {
+            responseInfo.Mensagem = $"Ahh bacana! Vi que você quer sua fatura do mês de {responseInfo.Data}!\nAcabamos de enviar a fatura em PDF para o seu e-mail ****@dominio.com.br.\nSe a fatura estiver em aberto vamos enviar o código por SMS também.";
+            responseInfo.IsEnviar = true;
+        }
+
+        return responseInfo;
+    }
+
+    private static string RemoverAcentos(string texto)
+    {
+        if (string.IsNullOrWhiteSpace(texto))
+            return texto;
+
+        string normalizedString = texto.Normalize(NormalizationForm.FormD);
+        StringBuilder sb = new StringBuilder();
+
+        foreach (char c in normalizedString)
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
+                sb.Append(c);
+        }
+
+        return sb.ToString().Normalize(NormalizationForm.FormC);
+    }
 
     public class RequestBody
     {
@@ -238,6 +321,9 @@ public static class GetChat
         public bool Cancelamento { get; set; }
         public bool Cartao { get; set; }
         public bool Cadastro { get; set; }
+        public bool Saudacao { get; set; }
         public bool NaoReconheceCompras { get; set; }
+        public string Mensagem { get; set; }
+        public bool IsEnviar { get; set; }
     }
 }
