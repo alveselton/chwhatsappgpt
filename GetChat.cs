@@ -34,16 +34,14 @@ public static class GetChat
         ILogger log)
     {
         log.LogInformation("Inicio Chat");
-
         string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-
         log.LogInformation(requestBody);
 
 
         var parameters = parametrosPesquisa(requestBody, log);
 
         var content = $"No \"Texto\" tem alguma data? alguma informacao se é sobre fatura? Tem pedido de informacao sobre produto? Tem pedido de cancelamento? Tem informacao de roubo ou perda de cartao? Tem algum pedido de informacao de Cartao? Tem pedido de informacao de Cadastro? Informacao sobre nao reconhecer Compras? O texto contem saudacao inicial de conversa?\nObservacao: \n- Data precisa que seja formatada em MM/YYYY\n- Se tiver no texto \"fatura do meu cartao\" a fatura= sim e cartao = nao;\n- Se tiver no texto \"saldo cartao\" a fatura = nao e cartao = sim e Saldo-Cartao = sim;\n- Se tiver no texto \"saldo fatura\" a fatura = sim e cartao = nao e Saldo-Cartao = nao;\n- Nao pode haver acentuacao;\n\nPreciso que o dado sejam resumido. \n- Data: <<valor>>\n- Fatura: Sim ou Nao\n- Produto: Sim ou Nao\n- Roubo ou Perda de Cartao: Sim ou Nao\n- Cancelamento: Sim ou Nao\n- Cartao: Sim ou Nao\n- Cadastro: Sim ou Nao\n- Nao-Reconhece-Compras: Sim ou Nao\n- Saudacao: Sim ou Nao\n- Saldo-Cartao: Sim ou Nao\n\nTexto: \"{parameters.Question}\"";
-        var response = await GenerateResponseGptTurbo(content);
+        var response = await GenerateResponseGptTurbo(content, log);
 
         if (response.choices.Count > 0)
         {
@@ -115,8 +113,9 @@ public static class GetChat
         }
     }
 
-    private static async Task<OpenAIResponse> GenerateResponseGptTurbo(string question)
+    private static async Task<OpenAIResponse> GenerateResponseGptTurbo(string question, ILogger log)
     {
+        log.LogInformation("Inicio GPT");
         var client = new HttpClient();
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
 
@@ -134,8 +133,8 @@ public static class GetChat
         var responseContent = await response.Content.ReadAsStringAsync();
  
         var responseObject = JsonConvert.DeserializeObject<OpenAIResponse>(responseContent);
+        log.LogInformation("GPT - " + Newtonsoft.Json.JsonConvert.SerializeObject(responseObject));
         return responseObject;
-
     }
 
     private static ResponseInfo ConverterValor(string response, ILogger log)
@@ -230,13 +229,13 @@ public static class GetChat
 
             obj.Parametros = requestBody;
             obj.User = obj?.Fromreceived?.Split(":")[1];
-            log.LogInformation("parametrosPesquisa - " + obj.ToString());
+            log.LogInformation("parametrosPesquisa - " + Newtonsoft.Json.JsonConvert.SerializeObject(obj));
             return obj;
         }
         else
         {
             var obj = JsonConvert.DeserializeObject<Parameters>(parameters);
-            log.LogInformation("parametrosPesquisa - " + obj.ToString());
+            log.LogInformation("parametrosPesquisa - " + Newtonsoft.Json.JsonConvert.SerializeObject(obj));
             return obj;
         }
     }
