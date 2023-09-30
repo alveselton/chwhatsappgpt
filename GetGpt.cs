@@ -207,9 +207,9 @@ public static class GetGpt
     public static decimal SaldoConta(string user)
     {
         IMongoCollection<Billing> historico = client.GetDatabase("chatgpt").GetCollection<Billing>("billing");
-        
+
         var filtro = Builders<Billing>.Filter.Eq(x => x.User, user);
-        
+
         var aggregate = historico.Aggregate()
         .Match(filtro)
         .Group(new BsonDocument
@@ -301,6 +301,13 @@ public static class GetGpt
         public int index { get; set; }
         public object logprobs { get; set; }
         public string finish_reason { get; set; }
+        public Message message { get; set; }
+    }
+
+    public class Message
+    {
+        public string role { get; set; }
+        public string content { get; set; }
     }
 
     public class Usage
