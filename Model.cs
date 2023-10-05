@@ -76,3 +76,11 @@ public class Gerenciamento
     public string Mensagem { get; set; }
     public string ArquivoBase64 { get; set; }
 }
+
+public class Email
+{
+    public string Assunto { get; set; }
+    public string Endereco { get; set; }
+    public string Corpo { get; set; }
+    public string ArquivoBase64 { get; set; }
+}
