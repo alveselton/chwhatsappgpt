@@ -22,10 +22,8 @@ public static class GetChat
     private static readonly Lazy<MongoClient> lazyClient = new(InitializeMongoClient);
     private static readonly MongoClient client = lazyClient.Value;
 
-    private static readonly string apiKey = "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";
     private static readonly string apiUrl = "https://api.openai.com/v1/engines/text-davinci-003/completions";
     private static readonly string endpoint = "https://api.openai.com/v1/chat/completions";
-    private static readonly string endpointGerenciamento = "https://chwhatsappgptapp.azurewebsites.net/api/SendGerenciamento?code=oFx0pMLm7xAcA3O-yKO-WdQLktCSuidA6Xptxfc2BIeaAzFuG_V51A==";
 
     [FunctionName("GetChat")]
     public static async Task<IActionResult> Run(
@@ -80,7 +78,7 @@ public static class GetChat
         {
             using (HttpClient client = new HttpClient())
             {
-                client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
+                client.DefaultRequestHeaders.Add("Authorization", $"Bearer {Environment.GetEnvironmentVariable("APIKEY_GPT")}");
 
                 var requestData = new
                 {
@@ -116,7 +114,7 @@ public static class GetChat
     {
         log.LogInformation("Inicio GPT");
         var client = new HttpClient();
-        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", Environment.GetEnvironmentVariable("APIKEY_GPT"));
 
         var parameters = new
         {

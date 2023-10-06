@@ -1,67 +1,64 @@
-﻿using Azure.Communication.Email;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.WebJobs;
+﻿using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Logging;
-using RabbitMQ.Client.Events;
-using RabbitMQ.Client;
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Text;
-using Microsoft.WindowsAzure.Storage.Queue.Protocol;
-using System.Text.Json;
-using System.Net.Http;
-using System.Net;
 using Newtonsoft.Json;
+using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
+using System;
+using System.Net;
+using System.Net.Http;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace chwhatsappgpt;
 
 public static class WorkerGerenciamento
 {
-    private static string _URL_MENSAGERIA = "amqp://jwczbtul:vmX6DvLV2k-ZawR_PTyV6drJk5m5QI8b@jackal.rmq.cloudamqp.com/jwczbtul";
-
     [FunctionName("WorkerGerenciamento")]
-    public async static Task Run(
-        [TimerTrigger("0 0/5 * * * *")] TimerInfo myTimer,
+    public static void Run(
+        [TimerTrigger("0 0/1 * * * *")] TimerInfo myTimer,
         ILogger log)
     {
-        try
+        log.LogInformation(Environment.GetEnvironmentVariable("URL_GERENCIAMENTO"));
+        log.LogInformation("Início do worker");
+        LerFila(log);        
+        log.LogInformation("Final fila.....");
+    }
+
+    private static void LerFila(ILogger log)
+    {
+        var factory = new ConnectionFactory { Uri = new Uri(Environment.GetEnvironmentVariable("URL_GERENCIAMENTO")) };
+
+        using var connection = factory.CreateConnection();
+        using var channel = connection.CreateModel();
+
+        channel.QueueDeclare(queue: "gerenciamento",
+                             durable: true,
+                             exclusive: false,
+                             autoDelete: false,
+                             arguments: null);
+
+        log.LogInformation(" [*] Waiting for messages.");
+
+        var consumer = new EventingBasicConsumer(channel);
+        consumer.Received += async (model, ea) =>
         {
-            log.LogInformation("Início do worker");
+            var body = ea.Body.ToArray();
+            var message = Encoding.UTF8.GetString(body);
+            var msg = JsonConvert.DeserializeObject<Gerenciamento>(message);
 
-            var factory = new ConnectionFactory
-            {
-                Uri = new Uri(_URL_MENSAGERIA)
-            };
+            var responseEnviar = await Enviar(msg, log);
 
-            using (var connection = factory.CreateConnection())
-            using (var channel = connection.CreateModel())
-            {
-                var queueName = "Gerenciamento";
+            if (responseEnviar)
+                channel.BasicAck(ea.DeliveryTag, false);
+            else
+                channel.BasicNack(ea.DeliveryTag, false, false);
 
-                channel.QueueDeclare(queue: queueName, durable: false, exclusive: false, autoDelete: false, arguments: null);
+            log.LogInformation($" [x] Received {message}");
+        };
 
-                var consumer = new EventingBasicConsumer(channel);
-
-                consumer.Received += (model, ea) =>
-                {
-                    var messageBody = Encoding.UTF8.GetString(ea.Body.ToArray());
-                    log.LogInformation($"Mensagem recebida da fila RabbitMQ: {messageBody}");
-
-
-                    var queueMessage = JsonSerializer.Deserialize<Gerenciamento>(messageBody);
-
-                    channel.BasicAck(ea.DeliveryTag, false);
-                };
-
-                channel.BasicConsume(queue: queueName, autoAck: false, consumer: consumer);
-            }
-        }
-        catch (Exception ex)
-        {
-            log.LogError($"Erro ao consumir mensagem da fila RabbitMQ: {ex.Message}");
-        }
+        channel.BasicConsume(queue: "gerenciamento",
+                             autoAck: false,
+                             consumer: consumer);
     }
 
     private async static Task<bool> Enviar(Gerenciamento gerenciamento, ILogger log)
@@ -72,7 +69,7 @@ public static class WorkerGerenciamento
             var client = new HttpClient();
             var response = await client
                 .PostAsync(
-                "http://localhost:7038/api/SendEmail",
+                Environment.GetEnvironmentVariable("URL_EMAIL"),
                 new StringContent(JsonConvert.SerializeObject(gerenciamento),
                 Encoding.UTF8,
                 "application/json"));
@@ -84,6 +81,7 @@ public static class WorkerGerenciamento
         {
             log.LogError(ex.Message);
         }
+
         return false;
     }
 
