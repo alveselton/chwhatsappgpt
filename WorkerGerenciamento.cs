@@ -14,22 +14,22 @@ namespace chwhatsappgpt;
 public static class WorkerGerenciamento
 {
     [FunctionName("WorkerGerenciamento")]
-    public static async Task RunAsync(
-        [TimerTrigger("0 0/1 * * * *")] TimerInfo myTimer,
+    public static void RunAsync(
+        [TimerTrigger("* 0/5 * * * *")] TimerInfo myTimer,
         ILogger log)
     {
-        log.LogInformation(Environment.GetEnvironmentVariable("URL_GERENCIAMENTO"));
         log.LogInformation("Início do worker");
-        await LerFila(log);        
+        LerFila(log);        
         log.LogInformation("Final fila.....");
     }
 
-    private async static Task LerFila(ILogger log)
+    private static void LerFila(ILogger log)
     {
+        log.LogInformation("LerFila.....");
         var factory = new ConnectionFactory { Uri = new Uri(Environment.GetEnvironmentVariable("URL_GERENCIAMENTO")) };
 
-        using var connection = factory.CreateConnection();
-        using var channel = connection.CreateModel();
+        var connection = factory.CreateConnection();
+        var channel = connection.CreateModel();
 
         channel.QueueDeclare(
                             queue: "gerenciamento",
@@ -38,21 +38,31 @@ public static class WorkerGerenciamento
                             autoDelete: false,
                             arguments: null);
 
+        channel.BasicQos(prefetchSize: 0, prefetchCount: 1, global: false);
+
         var consumer = new EventingBasicConsumer(channel);
 
-        consumer.Received += async (model, ea) =>
+        consumer.Received += (model, ea) =>
         {
             log.LogInformation("Tem Msg");
-            var body = ea.Body.ToArray();
-            var message = Encoding.UTF8.GetString(body);
-            var msg = JsonConvert.DeserializeObject<Gerenciamento>(message);
 
-            var responseEnviar = await Enviar(msg, log);
+            try
+            {
+                var body = ea.Body.ToArray();
+                var message = Encoding.UTF8.GetString(body);
+                var msg = JsonConvert.DeserializeObject<Gerenciamento>(message);
+                var responseEnviar = Enviar(msg, log).Result;
 
-            if (responseEnviar)
-                channel.BasicAck(ea.DeliveryTag, false);
-            else
-                channel.BasicNack(ea.DeliveryTag, false, false);
+                if (responseEnviar)
+                    channel.BasicAck(ea.DeliveryTag, false);
+                else
+                    channel.BasicNack(ea.DeliveryTag, false, true);
+            }
+            catch (Exception ex)
+            {
+                channel.BasicNack(ea.DeliveryTag, false, true);
+                log.LogError(ex.Message, ex);
+            }
         };
 
         channel.BasicConsume("gerenciamento",

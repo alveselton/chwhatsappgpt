@@ -21,7 +21,7 @@ public class SendEmail
         string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
         var email = PreparaCorpoEmail(requestBody);        
 
-        EmailClient emailClient = new EmailClient("endpoint=https://service-email-chwhatsappgptapp.unitedstates.communication.azure.com/;accesskey=Me4pkAw10c92iMtD67qlmjHccm85hLBO1rvW/cSS7M+DZykfH02uwR4O1fsFpuHAcRsF3sBhKKy7/5Vx4SS2cA==");
+        EmailClient emailClient = new EmailClient(Environment.GetEnvironmentVariable("URL_SERVICE_EMAIL"));
                 
         var emailSendOperation = await emailClient.SendAsync(
                                                     Azure.WaitUntil.Completed,
@@ -46,8 +46,11 @@ public class SendEmail
         var htmlContent = "<html><body><h1>Fatura</h1><br/><h4>Este e-mail contém sua fatura.</h4><p>Baixe nosso aplicativo nas lojas.</p></body></html>";
         var emailMessage = new EmailMessage(sender, obj.Email, new EmailContent(subject) { Html = htmlContent});
 
-        var pdfBinaryData = System.BinaryData.FromBytes(Convert.FromBase64String(obj.ArquivoBase64));
-        emailMessage.Attachments.Add(new EmailAttachment("Fatura.pdf", "application/pdf", pdfBinaryData));
+        if (!string.IsNullOrEmpty(obj.ArquivoBase64)) { 
+            var pdfBinaryData = BinaryData.FromStream(new MemoryStream(Convert.FromBase64String(obj.ArquivoBase64)));
+            emailMessage.Attachments.Add(new EmailAttachment("Fatura.pdf", "application/pdf", pdfBinaryData));
+        }
+        
         return emailMessage;
     }
 
