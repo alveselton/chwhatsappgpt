@@ -4,6 +4,7 @@ using Newtonsoft.Json;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -15,7 +16,7 @@ public static class WorkerGerenciamento
 {
     [FunctionName("WorkerGerenciamento")]
     public static void RunAsync(
-        [TimerTrigger("* 0/5 * * * *")] TimerInfo myTimer,
+        [TimerTrigger("0 0/5 * * * *")] TimerInfo myTimer,
         ILogger log)
     {
         log.LogInformation("Início do worker");
@@ -30,6 +31,15 @@ public static class WorkerGerenciamento
 
         var connection = factory.CreateConnection();
         var channel = connection.CreateModel();
+
+        channel.ExchangeDeclare("DeadLetterExchange", ExchangeType.Fanout);
+        channel.QueueDeclare("DeadLetterQueue", true, false, false, null);
+        channel.QueueBind("DeadLetterQueue", "DeadLetterExchange", "");
+
+        var arguments = new Dictionary<string, object>()
+        {
+            { "x-dead-letter-exchange", "DeadLetterExchange" }
+        };
 
         channel.QueueDeclare(
                             queue: "gerenciamento",
@@ -56,11 +66,11 @@ public static class WorkerGerenciamento
                 if (responseEnviar)
                     channel.BasicAck(ea.DeliveryTag, false);
                 else
-                    channel.BasicNack(ea.DeliveryTag, false, true);
+                    channel.BasicNack(ea.DeliveryTag, false, false);
             }
             catch (Exception ex)
             {
-                channel.BasicNack(ea.DeliveryTag, false, true);
+                channel.BasicNack(ea.DeliveryTag, false, false);
                 log.LogError(ex.Message, ex);
             }
         };

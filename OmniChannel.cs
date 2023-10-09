@@ -36,7 +36,7 @@ public class OmniChannel
             using (var connection = factory.CreateConnection())
             using (var channel = connection.CreateModel())
             {
-                var queueName = "Gerenciamento";
+                var queueName = "gerenciamento";
 
                 channel.QueueDeclare(queue: queueName, durable: false, exclusive: false, autoDelete: false, arguments: null);
 
