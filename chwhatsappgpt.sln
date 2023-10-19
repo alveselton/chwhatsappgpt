@@ -5,6 +5,10 @@ VisualStudioVersion = 17.5.33530.505
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "chwhatsappgpt", "chwhatsappgpt.csproj", "{FB15C22F-6209-492F-A9CE-2DE025A68681}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MonitorCall", "..\MonitorCall\MonitorCall.csproj", "{BB011EF1-FB75-4142-A122-0D4A0278342A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sistema", "..\Sistema\Sistema.csproj", "{25F0193D-31BC-47C1-AA9E-921831091933}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +19,14 @@ Global
 		{FB15C22F-6209-492F-A9CE-2DE025A68681}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FB15C22F-6209-492F-A9CE-2DE025A68681}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FB15C22F-6209-492F-A9CE-2DE025A68681}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BB011EF1-FB75-4142-A122-0D4A0278342A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BB011EF1-FB75-4142-A122-0D4A0278342A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BB011EF1-FB75-4142-A122-0D4A0278342A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BB011EF1-FB75-4142-A122-0D4A0278342A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{25F0193D-31BC-47C1-AA9E-921831091933}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{25F0193D-31BC-47C1-AA9E-921831091933}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{25F0193D-31BC-47C1-AA9E-921831091933}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{25F0193D-31BC-47C1-AA9E-921831091933}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

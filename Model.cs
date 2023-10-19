@@ -1,4 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using MongoDB.Bson.Serialization.Attributes;
+using MongoDB.Bson;
+using System.Collections.Generic;
+using Newtonsoft.Json;
+using System;
 
 namespace chwhatsappgpt;
 
@@ -83,4 +87,48 @@ public class Email
     public string Endereco { get; set; }
     public string Corpo { get; set; }
     public string ArquivoBase64 { get; set; }
+}
+
+public class Fatura
+{
+    private string codigoBarras;
+
+    [JsonIgnore]
+    [BsonId]
+    public ObjectId Id { get; set; }
+    public DateTime MesRef { get; set; } = default!;
+    public string Cpf { get; set; } = default!;
+    public string NumeroConta { get; set; } = default!;
+    public string Pix { get; set; } = default!;
+    public ValorMoeda PagamentoMinimo { get; set; } = default!;
+    public ValorMoeda ValorFatura { get; set; } = default!;
+    public ValorMoeda? ValorPago { get; set; } = default!;
+    public ValorMoeda Creditos { get; set; } = default!;
+    public string? CodigoBarras
+    {
+        get
+        {
+            if (ValorPago is not null)
+                return null;
+
+            return codigoBarras;
+        }
+        set
+        {
+            codigoBarras = value;
+        }
+    }
+    public void AtualizarCodigoBarras()
+    {
+        if (ValorPago is not null)
+        {
+            CodigoBarras = null;
+        }
+    }
+}
+
+public class ValorMoeda
+{
+    public string Moeda { get; set; } = default!;
+    public decimal Valor { get; set; } = default!;
 }
