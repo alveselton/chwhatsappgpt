@@ -16,6 +16,7 @@ public class ResponseInfo
     public bool Cartao { get; set; }
     public bool Cadastro { get; set; }
     public bool Saudacao { get; set; }
+    public bool FaturaAberto { get; set; }
     public bool NaoReconheceCompras { get; set; }
     public string Mensagem { get; set; }
     public bool IsEnviar { get; set; }
@@ -58,10 +59,12 @@ public class Usage
 
 public class Parameters
 {
+    public string SmsMessageSid { get; set; }
     public string ProfileName { get; set; }
     public string WaId { get; set; }
     public string Body { get; set; }
     public string Fromreceived { get; set; }
+    public string From { get; set; }
     public string To { get; set; }
     public string Question { get; set; }
     public string User { get; set; }

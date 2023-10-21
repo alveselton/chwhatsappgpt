@@ -6,6 +6,11 @@ namespace chwhatsappgpt.Interface;
 
 public class FechadasStrategy : IFaturaStrategy
 {
+    public string ProcessFatura(Fatura fatura)
+    {
+        throw new System.NotImplementedException();
+    }
+
     public string ProcessFaturas(List<Fatura> faturas)
     {
         var faturasFechadas = "";
@@ -13,8 +18,8 @@ public class FechadasStrategy : IFaturaStrategy
 
         foreach (var item in faturas.Where(x => x.ValorPago is not null))
         {
-            faturasFechadas += $"*{count}.  {item.MesRef.ToString("MMMM/yyyy", new CultureInfo("pt-BR"))}*\n";
-            faturasFechadas += $"💰 Valor: {item.ValorFatura.Moeda} {item.ValorFatura.Valor}\n\n";
+            faturasFechadas += $"*{count}.   {item.MesRef.ToString("MMMM/yyyy", new CultureInfo("pt-BR")).ToUpper()}*\n";
+            faturasFechadas += $"💰 Valor: {item.ValorFatura.Valor.ToString("C", new CultureInfo("pt-BR"))}\n\n";
 
             count++;
         }

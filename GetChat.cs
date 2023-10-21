@@ -15,6 +15,10 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using Twilio;
+using Twilio.Rest.Api.V2010.Account;
+using Twilio.TwiML;
+using Twilio.TwiML.Messaging;
 using static chwhatsappgpt.GetGpt;
 
 namespace chwhatsappgpt;
@@ -27,6 +31,13 @@ public static class GetChat
     private static readonly string apiUrl = "https://api.openai.com/v1/engines/text-davinci-003/completions";
     private static readonly string endpoint = "https://api.openai.com/v1/chat/completions";
 
+    static GetChat()
+    {
+        string accountSid = "AC826847d039c4e83a67cc1353830758e0";
+        string authToken = "45f3c10c773b753e0eef80ddedf28744";
+        TwilioClient.Init(accountSid, authToken);
+    }
+
     [FunctionName("GetChat")]
     public static async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req,
@@ -36,11 +47,11 @@ public static class GetChat
         string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
         log.LogInformation(requestBody);
 
-
         var parameters = parametrosPesquisa(requestBody, log);
 
-        var content = $"No \"Texto\" tem alguma data? alguma informacao se é sobre fatura? Tem pedido de informacao sobre produto? Tem pedido de cancelamento? Tem informacao de roubo ou perda de cartao? Tem algum pedido de informacao de Cartao? Tem pedido de informacao de Cadastro? Informacao sobre nao reconhecer Compras? O texto contem saudacao inicial de conversa?\nObservacao: \n- Data precisa que seja formatada em MM/YYYY\n- Se tiver no texto \"fatura do meu cartao\" a fatura= sim e cartao = nao;\n- Se tiver no texto \"saldo cartao\" a fatura = nao e cartao = sim e Saldo-Cartao = sim;\n- Se tiver no texto \"saldo fatura\" a fatura = sim e cartao = nao e Saldo-Cartao = nao;\n- Nao pode haver acentuacao;\n\nPreciso que o dado sejam resumido. \n- Data: <<valor>>\n- Fatura: Sim ou Nao\n- Produto: Sim ou Nao\n- Roubo ou Perda de Cartao: Sim ou Nao\n- Cancelamento: Sim ou Nao\n- Cartao: Sim ou Nao\n- Cadastro: Sim ou Nao\n- Nao-Reconhece-Compras: Sim ou Nao\n- Saudacao: Sim ou Nao\n- Saldo-Cartao: Sim ou Nao\n\nTexto: \"{parameters.Question}\"";
-        var response = await GenerateResponseGptTurbo(content, log);
+        StringBuilder contentGpt = PromptGpt(parameters);
+
+        var response = await GenerateResponseGptTurbo(contentGpt.ToString(), log);
 
         if (response.choices.Count > 0)
         {
@@ -53,16 +64,24 @@ public static class GetChat
             var saudacao = SeSaudacao(responseTratado, parameters);
             if (saudacao.Saudacao && saudacao.IsEnviar)
             {
-                log.LogInformation("Saudacao " + saudacao.ToString());
+                log.LogInformation("Saudacao");
                 return new OkObjectResult(saudacao.Mensagem);
             }
 
             //FATURA
             var fatura = await SeFatura(responseTratado, parameters, log);
-            if (fatura.Fatura && saudacao.IsEnviar)
+            if (fatura.Fatura && saudacao.IsEnviar && !responseTratado.FaturaAberto)
             {
                 log.LogInformation("Fatura " + fatura.ToString());
                 return new OkObjectResult(fatura.Mensagem);
+            }
+
+            //FATURA EM ABERTO
+            var faturaAberto = await SeFaturaAberto(responseTratado, parameters, log);
+            if (faturaAberto.FaturaAberto && faturaAberto.IsEnviar)
+            {
+                log.LogInformation("Fatura em aberto " + faturaAberto.Mensagem);
+                return new OkObjectResult(faturaAberto.Mensagem);
             }
 
             log.LogInformation("Final");
@@ -72,6 +91,49 @@ public static class GetChat
         {
             return new BadRequestObjectResult("Erro na chamada à API do OpenAI.");
         }
+    }
+
+    private static async Task SendMessageWhatsapp(string to, string from, string msg, ILogger log)
+    {
+        try
+        {
+            log.LogInformation($"{to} - {from} - {msg}");
+
+            var messageSend = MessageResource.Create(
+                body: msg,
+                to: new Twilio.Types.PhoneNumber(from),
+                from: new Twilio.Types.PhoneNumber(to)
+            );
+
+            log.LogInformation(messageSend.Sid);
+        }
+        catch (Exception ex)
+        {
+            log.LogInformation(ex.Message);
+            log.LogInformation(ex.StackTrace);
+            throw;
+        }
+    }
+
+    private static StringBuilder PromptGpt(Parameters parameters)
+    {
+        var contentGpt = new StringBuilder();
+        contentGpt.Append("No 'Texto' tem alguma data? alguma informacao se é sobre fatura? Tem pedido de informacao sobre produto? Tem pedido de cancelamento?");
+        contentGpt.Append("Tem informacao de roubo ou perda de cartao? ");
+        contentGpt.Append("Tem algum pedido de informacao de Cartao? ");
+        contentGpt.Append("Tem pedido de informacao de Cadastro? ");
+        contentGpt.Append("Informacao sobre nao reconhecer Compras? ");
+        contentGpt.Append("O texto contem saudacao inicial de conversa? ");
+        contentGpt.Append("\nObservacao:");
+        contentGpt.Append("\n- Data precisa que seja formatada em MM/YYYY;");
+        contentGpt.Append("\n- Se tiver no texto \"fatura do meu cartao\" a fatura= sim e cartao = nao;");
+        contentGpt.Append("\n- Se tiver no texto \"saldo cartao\" a fatura = nao e cartao = sim e Saldo-Cartao = sim;");
+        contentGpt.Append("\n- Se tiver no texto \"saldo fatura\" a fatura = sim e cartao = nao e Saldo-Cartao = nao;");
+        contentGpt.Append("\n- Se tiver no texto \"fatura aberta\" a fatura = nao e cartao = nao e Saldo-Cartao = nao e Fatura-aberto = sim;");
+        contentGpt.Append("\n- Nao pode haver acentuacao;");
+        contentGpt.Append("\n- Preciso que o dado sejam resumido.\n\n");
+        contentGpt.Append($"\n- Data: <<valor>>\n- Fatura: Sim ou Nao\n- Produto: Sim ou Nao\n- Roubo ou Perda de Cartao: Sim ou Nao\n- Cancelamento: Sim ou Nao\n- Cartao: Sim ou Nao\n- Cadastro: Sim ou Nao\n- Nao-Reconhece-Compras: Sim ou Nao\n- Saudacao: Sim ou Nao\n- Saldo-Cartao: Sim ou Nao\n- Fatura-aberto: Sim ou Nao\n\nTexto: \"{parameters.Question}\"");
+        return contentGpt;
     }
 
     private static async Task<OpenAIResponse> GenerateResponse(string question)
@@ -194,6 +256,10 @@ public static class GetChat
                     case "Saudacao":
                         responseInfo.Saudacao = value.Equals("Sim", StringComparison.OrdinalIgnoreCase);
                         break;
+                    case "- Fatura-aberto":
+                    case "Fatura-aberto":
+                        responseInfo.FaturaAberto = value.Equals("Sim", StringComparison.OrdinalIgnoreCase);
+                        break;
                     default:
                         // Ignorar chaves desconhecidas
                         break;
@@ -224,6 +290,9 @@ public static class GetChat
                 obj.ProfileName = requestBody["ProfileName"]?.Replace("+", " ") ?? " =)";
             }
 
+            if (requestBody.ContainsKey("SmsMessageSid"))
+                obj.SmsMessageSid = requestBody["SmsMessageSid"];
+
             if (requestBody.ContainsKey("waId"))
                 obj.WaId = requestBody["waId"];
 
@@ -236,8 +305,11 @@ public static class GetChat
             if (requestBody.ContainsKey("fromreceived"))
                 obj.Fromreceived = requestBody["fromreceived"];
 
-            if (requestBody.ContainsKey("to"))
-                obj.To = requestBody["to"];
+            if (requestBody.ContainsKey("To"))
+                obj.To = requestBody["To"];
+
+            if (requestBody.ContainsKey("From"))
+                obj.From = requestBody["From"];
 
             obj.Parametros = requestBody;
             obj.User = obj?.Fromreceived?.Split(":")[1];
@@ -283,7 +355,7 @@ public static class GetChat
             responseInfo.IsEnviar = true;
         }
 
-        if (responseInfo.Fatura && !data) 
+        if (responseInfo.Fatura && !data)
         {
             log.LogInformation("Listar Faturas");
             var listarFaturas = await ListaFaturas(log);
@@ -292,19 +364,47 @@ public static class GetChat
 
             if (listarFaturas.Count > 0)
             {
-                log.LogInformation("Maior que zero");
-                IFaturaStrategy abertasStrategy = new AbertasStrategy();
-                IFaturaStrategy fechadasStrategy = new FechadasStrategy();
+                await SendMessageWhatsapp(parametros.To, parametros.From, "Vou listar as faturas dos 12 últimos meses. Faturas em abertas e fechadas.", log);
 
+                IFaturaStrategy abertasStrategy = new AbertasStrategy();
                 faturasAbertas = abertasStrategy.ProcessFaturas(listarFaturas);
+                await SendMessageWhatsapp(parametros.To, parametros.From, $"📈 *Em Aberto*\n{faturasAbertas}", log);
                 log.LogInformation(faturasAbertas);
 
+                IFaturaStrategy fechadasStrategy = new FechadasStrategy();
                 faturasFechadas = fechadasStrategy.ProcessFaturas(listarFaturas);
+                await SendMessageWhatsapp(parametros.To, parametros.From, $"📉 *Fechadas*\n{faturasFechadas}", log);
                 log.LogInformation(faturasFechadas);
 
+                responseInfo.Mensagem = $"Digite Fatura 'mes/ano' que você deseja para ver mais detalhes. Se preferir, digite 'minhas faturas' para eu listar o seu histórico de faturas.";
             }
 
-            responseInfo.Mensagem = $"Vou listar as faturas dos 12 últimos meses. Faturas em abertas e fechadas.\n\n📈 *Em Aberto*\n{faturasAbertas} \n\n\n📉 *Fechadas*\n{faturasFechadas}";
+            responseInfo.IsEnviar = true;
+        }
+
+        return responseInfo;
+    }
+
+    private static async Task<ResponseInfo> SeFaturaAberto(ResponseInfo responseInfo, Parameters parametros, ILogger log)
+    {
+        log.LogInformation("Fatura em aberto *****");
+
+        string formatoData = "MM/yyyy";
+
+        if (responseInfo.FaturaAberto)
+        {
+            log.LogInformation("Listar Faturas em aberto");
+            var listarFaturas = await ListaFaturas(log);
+            var faturasAbertas = "";
+
+            if (listarFaturas.Count > 0)
+            {
+                IFaturaStrategy abertasStrategy = new AbertasStrategy();
+                faturasAbertas = abertasStrategy.ProcessFaturas(listarFaturas);
+                log.LogInformation(faturasAbertas);
+            }
+
+            responseInfo.Mensagem = $"📈 Suas faturas em aberto(s):\n\n{faturasAbertas}\nDigite Fatura 'mes/ano' que você deseja para ver mais detalhes. Se preferir, digite 'Minhas faturas' para eu listar o seu histórico de faturas.";
             responseInfo.IsEnviar = true;
         }
 
@@ -344,7 +444,7 @@ public static class GetChat
             log.LogError(ex.StackTrace);
             return null;
             throw;
-        }        
+        }
     }
 
     private async static Task<bool> EnviarMensageria(Gerenciamento gerenciamento, ILogger log)
@@ -357,7 +457,7 @@ public static class GetChat
             if (response.StatusCode == HttpStatusCode.OK)
                 return true;
         }
-        catch (Exception ex) 
+        catch (Exception ex)
         {
             log.LogError(ex.Message);
         }
