@@ -1,0 +1,15 @@
+executar_teste:
+  before_script:
+      - echo "Preparando testes...."
+  script:
+    - echo "Executando testes...."
+  after_script:
+      - echo "Apagando arquivos temporários...."
+
+criar_imagens:
+  script:
+    - echo "Criando as testes...."
+
+push_imagens:
+  script:
+    - echo "Realizando upload das imagens...."
