@@ -14,7 +14,7 @@ namespace chwhatsappgpt;
 
 public class OmniChannel
 {
-    private static readonly string _urlMensageria = "amqp://jwczbtul:vmX6DvLV2k-ZawR_PTyV6drJk5m5QI8b@jackal.rmq.cloudamqp.com/jwczbtul";
+    private static readonly string _urlMensageria = "";
 
     [FunctionName("SendGerenciamento")]
     public static async Task<IActionResult> Run(
