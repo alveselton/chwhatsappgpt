@@ -25,7 +25,7 @@ public static class GetGpt
     private static readonly Lazy<MongoClient> lazyClient = new(InitializeMongoClient);
     private static readonly MongoClient client = lazyClient.Value;
 
-    private static readonly string apiKey = "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";
+    private static readonly string apiKey = "";
     private static readonly string apiUrl = "https://api.openai.com/v1/engines/text-davinci-003/completions";
 
     [FunctionName("GetGpt")]
@@ -121,10 +121,10 @@ public static class GetGpt
             string credencial = @"{
                                 'type': 'service_account',
                                 'project_id': 'cc-domain-prod',
-                                'private_key_id': '4856e896853aa3cbec4e55b4986e66c5d28e181f',
-                                'private_key': '-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDSimfwEMUGgoxS\nrLSJgidyaytae28wdf1Cv6qB+O2NIUhBC5O6bYmeIWQ51DV7+TcyOvgMeSR6LGdP\nAVCNd9fgmU+jwlo9cZ9npDN36Tq7kj6fNU8fpO6FKBmKMF97Yu8zrFJUMkTKGyz1\n9WygWtvNg8haPVMMoOw8Y/xePgk9LVRTdFEqx1S2XWO4CKnVNs4+BmNa9x6waB9f\njLoutR14oN+vvgyQKQDC8N51lcch2HXvBGtzX1Zg5hQJz9mFOExxfGsmUNyElqO9\nYC4yvDb0O7hszvAsw7MbTbcNfvzRfktVCtb2XG4SBTboDgeR4NzQcrjmsWBJiziH\n/FXbpEQ9AgMBAAECggEACxxyz8s9b/0ub/kyre8d1dQCEwxgmdYgP4g4n2ixC2RY\n7oCF6K4kjSEwq5H0y04js5WZHE9oYBTn1CuQQhGzuuQHEpq3LcxJSqxHwGmhR9+N\nSSmvEKR2UgtZDbSagBCAlIw2QWtFu295DUyefE1PPFFayX24XE+XKA4UINp1R7J8\nN3yegSo7sh/dnXPf6j0Jpj6DGnNr0oMd2NcUt7U27kxFAE+XyfFRNMzYW925hQXg\nfjanoGzPHObwGnGqH/leLIaocVALkIVdV4wynAsh8Vu6LjxXkV2ga/HH+3eD6Dtx\nDSYmvMiRsVHneWlID8Ge/zOF1VQaRhuogyXiO5V8oQKBgQDpuuy/GsQnvTIwopP9\nSgdoKjl4r3QqqRo9HsnxBSzYwQMAgCA+YrNqSHRNxDImkjz/Xcmsx7AxFm4N2mOc\nT9I2imk99Ax65Se/DEO3ktxogfUPtfd1Gvu7nc77ST8ZKp+7+UbVWTR+JHUit9uk\n3v0bcQeV6DkCYER3pNVJprh4XwKBgQDmmdlvF9pacU5aKncKPaS/pEUFPqrzluCC\nbcsPH7e9c0jBPXzV9YTymKHh9dLx3/wqRhdgZEywHmZ7U2mISd1wdTl+t0OgJl8Q\nV/q/1YfstSmUb7KJQMR6oXPIzMYnLIr5TpmtUDrNDK4FiMOMEkvdu//7dI6ArwFg\n2jEcSHt44wKBgQDpkO1Sj9njaFKGfYDrxZWfR0rFSngIxZG98E2XODe3pzFrx53x\nGcr2886dg+kl2E9yVXPa4HY2p5Z0639NTgrgi/JdgcsS6HqOlR/6i50MJooRGCNg\neAWFWE7lmC2g5ZJYUuOxAgLN53rSpe6tVFSUnqAY8sY9lJv2/9ZQUnXXewKBgAOb\nSmRLajXZ6dDNMzlsx2Pb7NxtI31V0cMYdoGRDG2hHPUwwgASq/ajXnzLPHZd+3Kp\nz/nI984VW6L4JgFkrlrw6mpJ8XvSvc/ioGBZtZuFJdZVfORap/gHCGmOklbQgoft\nq8ejJphIZ3xcrDpHmvon05QaOZRXqFzcbMI1fADjAoGBAJnkTOMhgXCYrJ3cCrhy\nSJ9t7SijBOS4haTch91V7/sGk8dL2Pw2Jwf5x+M3JA1q9PxVdzEC4uBvxW8ZlOxX\n2rC8+8eqeJwv6SPZjZYJfBYhT1wO/wMXD08svk2YEnkKM4D4QrDv/MXXXHrCol6W\nMEwXlACpqSF7I/KzG2rA4Gbn\n-----END PRIVATE KEY-----\n',
+                                'private_key_id': '',
+                                'private_key': '',
                                 'client_email': 'service-speech-to-text@cc-domain-prod.iam.gserviceaccount.com',
-                                'client_id': '102161664997149893680',
+                                'client_id': '',
                                 'auth_uri': 'https://accounts.google.com/o/oauth2/auth',
                                 'token_uri': 'https://oauth2.googleapis.com/token',
                                 'auth_provider_x509_cert_url': 'https://www.googleapis.com/oauth2/v1/certs',
