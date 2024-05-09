@@ -32,8 +32,8 @@ public static class GetChat
 
     static GetChat()
     {
-        string accountSid = "AC826847d039c4e83a67cc1353830758e0";
-        string authToken = "45f3c10c773b753e0eef80ddedf28744";
+        string accountSid = "";
+        string authToken = "";
         TwilioClient.Init(accountSid, authToken);
     }
 
